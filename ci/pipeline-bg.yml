@@ -1,0 +1,166 @@
+groups:
+- name: Blue
+  jobs:
+  - unit-tests
+  - deploy-blue-app
+  - load-tests-blue
+  - map-route-blue
+- name: Green
+  jobs:
+  - unit-tests
+  - deploy-green-app
+  - load-tests-green
+  - switch-blue-green-routes
+
+resources:
+- name: concourse-pipeline-samples
+  type: git
+  source:
+    branch: master
+    uri: https://github.com/pivotalservices/concourse-pipeline-samples.git
+- name: PWS
+  type: cf
+  source:
+    api: {{pws-api}}
+    organization: {{pws-organization}}
+    username: {{deploy-username}}
+    password: {{deploy-password}}
+    skip_cert_check: true
+    space: {{pws-space}}
+
+jobs:
+- name: unit-tests
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+  - task: run-unit-tests
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/unit-tests.yml
+
+- name: deploy-blue-app
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+    passed:
+      - unit-tests
+  - task: set-current-app-color-blue
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/set-current-app-info.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_API: {{pws-api}}
+      PWS_ORG: {{pws-organization}}
+      PWS_USER: {{deploy-username}}
+      PWS_PWD: {{deploy-password}}
+      PWS_SPACE: {{pws-space}}
+      APP_VERSION: blue
+  - task: prepare-app-manifest
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/app-manifest-prep.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+  - put: PWS
+    params:
+      manifest: app-manifest-output/manifest.yml
+      path: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/bgd-app
+
+- name: load-tests-blue
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+    passed:
+      - deploy-blue-app
+  - task: run-load-tests
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/load-tests.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_APP_DOMAIN: {{pws-app-domain}}
+      APP_VERSION: blue
+
+- name: map-route-blue
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+    passed:
+      - load-tests-blue
+  - task: switch-app-routes
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/update-routes.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_APP_DOMAIN: {{pws-app-domain}}
+      PWS_API: {{pws-api}}
+      PWS_ORG: {{pws-organization}}
+      PWS_USER: {{deploy-username}}
+      PWS_PWD: {{deploy-password}}
+      PWS_SPACE: {{pws-space}}
+      SWITCH_FROM_APP_VERSION: green
+      SWITCH_TO_APP_VERSION: blue
+
+
+- name: deploy-green-app
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: false
+    passed:
+      - load-tests-blue
+  - task: set-current-app-color-green
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/set-current-app-info.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_API: {{pws-api}}
+      PWS_ORG: {{pws-organization}}
+      PWS_USER: {{deploy-username}}
+      PWS_PWD: {{deploy-password}}
+      PWS_SPACE: {{pws-space}}
+      APP_VERSION: green
+  - task: prepare-app-manifest
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/app-manifest-prep.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+  - put: PWS
+    params:
+      manifest: app-manifest-output/manifest.yml
+      path: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/bgd-app
+
+- name: load-tests-green
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+    passed:
+      - deploy-green-app
+  - task: run-load-tests
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/load-tests.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_APP_DOMAIN: {{pws-app-domain}}
+      APP_VERSION: green
+
+- name: switch-blue-green-routes
+  serial: true
+  public: true
+  plan:
+  - get: concourse-pipeline-samples
+    trigger: true
+    passed:
+      - load-tests-green
+  - task: switch-app-routes
+    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/update-routes.yml
+    params:
+      PWS_APP_SUFFIX: {{pws-app-suffix}}
+      PWS_APP_DOMAIN: {{pws-app-domain}}
+      PWS_API: {{pws-api}}
+      PWS_ORG: {{pws-organization}}
+      PWS_USER: {{deploy-username}}
+      PWS_PWD: {{deploy-password}}
+      PWS_SPACE: {{pws-space}}
+      SWITCH_FROM_APP_VERSION: blue
+      SWITCH_TO_APP_VERSION: green
