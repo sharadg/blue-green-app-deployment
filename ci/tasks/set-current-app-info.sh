@@ -13,7 +13,7 @@ cf apps
 
 set +e
 cf apps | grep "main-$PWS_APP_SUFFIX" | grep "$APP_VERSION"
-echo "APP_VERSION" > ./current-app-info/current-app.txt
+echo "$APP_VERSION" > ./current-app-info/current-app.txt
 set -xe
 
 echo "Main application route points to app instance $(cat ./current-app-info/current-app.txt)"
