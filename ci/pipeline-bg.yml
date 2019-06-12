@@ -17,7 +17,7 @@ resources:
   type: git
   source:
     branch: master
-    uri: https://github.com/pivotalservices/concourse-pipeline-samples.git
+    uri: https://github.com/sharadg/blue-green-app-deployment.git
 - name: PWS
   type: cf
   source:
@@ -36,7 +36,7 @@ jobs:
   - get: concourse-pipeline-samples
     trigger: true
   - task: run-unit-tests
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/unit-tests.yml
+    file: concourse-pipeline-samples/ci/tasks/unit-tests.yml
 
 - name: deploy-blue-app
   serial: true
@@ -47,7 +47,7 @@ jobs:
     passed:
       - unit-tests
   - task: set-current-app-color-blue
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/set-current-app-info.yml
+    file: concourse-pipeline-samples/ci/tasks/set-current-app-info.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_API: {{pws-api}}
@@ -57,13 +57,13 @@ jobs:
       PWS_SPACE: {{pws-space}}
       APP_VERSION: blue
   - task: prepare-app-manifest
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/app-manifest-prep.yml
+    file: concourse-pipeline-samples/ci/tasks/app-manifest-prep.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
   - put: PWS
     params:
       manifest: app-manifest-output/manifest.yml
-      path: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/bgd-app
+      path: concourse-pipeline-samples/bgd-app
 
 - name: load-tests-blue
   serial: true
@@ -74,7 +74,7 @@ jobs:
     passed:
       - deploy-blue-app
   - task: run-load-tests
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/load-tests.yml
+    file: concourse-pipeline-samples/ci/tasks/load-tests.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_APP_DOMAIN: {{pws-app-domain}}
@@ -89,7 +89,7 @@ jobs:
     passed:
       - load-tests-blue
   - task: switch-app-routes
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/update-routes.yml
+    file: concourse-pipeline-samples/ci/tasks/update-routes.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_APP_DOMAIN: {{pws-app-domain}}
@@ -111,7 +111,7 @@ jobs:
     passed:
       - load-tests-blue
   - task: set-current-app-color-green
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/set-current-app-info.yml
+    file: concourse-pipeline-samples/ci/tasks/set-current-app-info.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_API: {{pws-api}}
@@ -121,13 +121,13 @@ jobs:
       PWS_SPACE: {{pws-space}}
       APP_VERSION: green
   - task: prepare-app-manifest
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/app-manifest-prep.yml
+    file: concourse-pipeline-samples/ci/tasks/app-manifest-prep.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
   - put: PWS
     params:
       manifest: app-manifest-output/manifest.yml
-      path: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/bgd-app
+      path: concourse-pipeline-samples/bgd-app
 
 - name: load-tests-green
   serial: true
@@ -138,7 +138,7 @@ jobs:
     passed:
       - deploy-green-app
   - task: run-load-tests
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/load-tests.yml
+    file: concourse-pipeline-samples/ci/tasks/load-tests.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_APP_DOMAIN: {{pws-app-domain}}
@@ -153,7 +153,7 @@ jobs:
     passed:
       - load-tests-green
   - task: switch-app-routes
-    file: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/update-routes.yml
+    file: concourse-pipeline-samples/ci/tasks/update-routes.yml
     params:
       PWS_APP_SUFFIX: {{pws-app-suffix}}
       PWS_APP_DOMAIN: {{pws-app-domain}}

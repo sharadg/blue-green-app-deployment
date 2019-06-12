@@ -12,4 +12,4 @@ inputs:
 - name: concourse-pipeline-samples
 
 run:
-  path: concourse-pipeline-samples/pipelines/appdev/blue-green-app-deployment/ci/tasks/update-routes
+  path: concourse-pipeline-samples/ci/tasks/update-routes.sh
